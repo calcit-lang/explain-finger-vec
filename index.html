@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>explain-finger-vec</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>explain-finger-vec</h1>
+      <p class="sub">
+        finger-vec 的布局:<code>front 缓冲区 | relaxed B-tree(块) | back 缓冲区</code>。点按钮执行操作,看哪些节点被新建、哪些被复用。
+      </p>
+    </header>
+
+    <div class="layout">
+      <aside class="card controls">
+        <fieldset>
+          <legend>初始状态</legend>
+          <label>块大小 cap
+            <select id="cap">
+              <option>2</option>
+              <option>3</option>
+              <option selected>4</option>
+              <option>5</option>
+              <option>8</option>
+            </select>
+          </label>
+          <label>初始元素个数 <input id="init" type="number" min="0" max="200" value="10" /></label>
+          <button id="reset" class="wide">重置</button>
+          <p class="note">真实实现里 cap 是 32,这里调小才看得清结构。</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>参数</legend>
+          <label>值 <input id="value" type="text" inputmode="numeric" placeholder="留空则自动递增" /></label>
+          <label>下标 / 切点 <input id="index" type="number" value="3" /></label>
+          <label>批量 / 拼接个数 <input id="count" type="number" min="1" max="100" value="6" /></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>两端</legend>
+          <div class="btns">
+            <button data-op="pushRight">pushRight</button>
+            <button data-op="pushLeft">pushLeft</button>
+            <button data-op="dropRight">dropRight</button>
+            <button data-op="dropLeft">dropLeft</button>
+            <button data-op="pushRightN" class="wide">pushRight × 批量</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>随机访问</legend>
+          <div class="btns">
+            <button data-op="get">get</button>
+            <button data-op="assoc">assoc</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>切分与拼接</legend>
+          <div class="btns">
+            <button data-op="insert">insert</button>
+            <button data-op="dissoc">dissoc</button>
+            <button data-op="split">split</button>
+            <button data-op="concat">concat</button>
+          </div>
+        </fieldset>
+
+        <p id="error" class="error" role="alert"></p>
+      </aside>
+
+      <main class="stage">
+        <div class="legend">
+          <span><i class="sw new"></i>本次新建的节点</span>
+          <span><i class="sw shared"></i>被复用(两个版本共享同一个节点)</span>
+          <span><i class="sw dropped"></i>只在旧版本里,新版本不再引用</span>
+          <span><i class="sw path"></i>get 经过的路径</span>
+          <span class="muted">虚线框 = 缓冲区;分支格子里的斜体数字 = 累计大小</span>
+        </div>
+        <div id="panels"></div>
+        <section id="explain" class="card explain"></section>
+
+        <details class="card rules">
+          <summary>规则速查</summary>
+          <ul>
+            <li><b>布局</b>:元素按顺序依次在 front、树里的各个叶子、back 中。叶子 1..cap 个元素,分支 1..cap 个孩子,所有叶子同深度,分支记录累计大小 ends(relaxed B-tree)。不超过 cap 个元素的向量整个放在 back 里。</li>
+            <li><b>push</b>:缓冲区没满就只改缓冲区;满了整块变成叶子,用 <code>Tree::concat</code> 并入树的那一侧。</li>
+            <li><b>drop</b>:缓冲区非空就只改缓冲区;为空就用 <code>tree.split</code> 取出树那一端的叶子当缓冲区,再丢元素。</li>
+            <li><b>get / assoc</b>:先判断落在 front、树还是 back;在树里就用 ends 逐层找孩子。assoc 沿这条路径复制节点,其余子树复用。</li>
+            <li><b>concat</b>:一侧不超过 cap 个元素就逐个 push 进另一侧;否则左树 = a.tree + a.back,右树 = b.front + b.tree,再 join 两棵树:较高的树沿脊柱下降到同一高度,接缝处相邻节点放得下就合并(merge_seam),不到半满的叶子重新均分,孩子超过 cap 就从中间拆开(pack)。</li>
+            <li><b>split</b>:沿根到切点的路径把每层节点拆成左右两半,路径之外的子树整体复用;左边的 back、右边的 front 留空。</li>
+            <li><b>insert / dissoc</b>:在两端时直接 push / drop,否则是 split + concat 的组合,所以是 O(log n),不会像链式结构那样越插越深。</li>
+            <li><b>重建</b>:split / concat 之后,树高超过 max_height(len)(假设节点只有四分之一满,再加一层余量)就把树里的元素重新切块建树。</li>
+            <li><b>本页的简化</b>:缓冲区每次都整体复制。真实实现里缓冲区是共享块的切片 <code>data[start..end]</code>,drop 只移动 start/end。</li>
+          </ul>
+        </details>
+      </main>
+
+      <aside class="card history">
+        <h2>版本历史</h2>
+        <p class="note">点一个版本查看它;在任意旧版本上继续操作会产生新分支 —— 旧版本永远不变。</p>
+        <ol id="history"></ol>
+      </aside>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

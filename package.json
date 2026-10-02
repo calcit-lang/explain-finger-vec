@@ -1,0 +1,19 @@
+{
+  "name": "explain-finger-vec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Visual explanation of finger-vec operations (front buffer | relaxed B-tree | back buffer)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsx src/test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  },
+  "license": "MIT"
+}
