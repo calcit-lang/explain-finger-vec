@@ -2,6 +2,8 @@
 
 交互式可视化 [finger-vec](https://github.com/calcit-lang/finger-vec.ts) 的数据结构和操作规则,思路参考 [explain-ternary-tree](https://github.com/calcit-lang/explain-ternary-tree)。
 
+Live demo <http://repo.calcit-lang.org/explain-finger-vec/>
+
 finger-vec 的布局:
 
 ```
@@ -26,6 +28,10 @@ npm run dev      # 开发
 npm run build    # tsc 类型检查 + vite 构建
 npm test         # 随机操作对照数组的测试
 ```
+
+## 部署
+
+`.github/workflows/upload.yaml` 参照 [respo-calcit-workflow](https://github.com/calcit-lang/respo-calcit-workflow):先跑类型检查和模型测试,再用 `VITE_BASE_URL=https://cos-sh.tiye.me/<repo>/` 构建,把 `dist` 上传到 COS;push 到 main 时 rsync 到 `tiye.me:/web-assets/repo/<repo>`,同仓库的 PR 上传到 `pr/` 前缀。需要 `COS_BUCKET`、`COS_SECRET_ID`、`COS_SECRET_KEY` 和 `rsync_private_key` 这几个 secrets。
 
 ## 实现说明
 
