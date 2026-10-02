@@ -72,6 +72,24 @@
       </aside>
 
       <main class="stage">
+        <section class="card toolbar" aria-label="自动播放">
+          <div class="tb-row">
+            <label class="tb-mode">自动播放模式
+              <select id="mode"></select>
+            </label>
+            <button id="play" type="button" aria-pressed="false" class="primary">▶ 播放</button>
+            <button id="step" type="button">单步</button>
+            <label class="tb-speed">速度
+              <span class="tb-speed-row">
+                <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1" />
+                <output id="speedOut">1×</output>
+              </span>
+            </label>
+          </div>
+          <p id="modeDesc" class="note"></p>
+          <p id="modeStatus" class="status" aria-live="off"></p>
+        </section>
+
         <div class="legend">
           <span><i class="sw new"></i>本次新建的节点</span>
           <span><i class="sw shared"></i>被复用(两个版本共享同一个节点)</span>
